@@ -1,4 +1,4 @@
-from Crypt.Cryptography import WrongCryptoError
+from Crypt.Cryptography import newSeed, WrongCryptoError
 
 from crypto.configuration.network import get_network, set_network
 from crypto.identity.address import address_from_private_key
@@ -12,14 +12,7 @@ from base64 import b64encode, b64decode
 import binascii
 import hashlib
 
-# We brazenly use CryptBitcoin for some utility functions which are implemented
-# the same way to avoid code duplication
-from Crypt import CryptBitcoin
-
 set_network(Mainnet)
-
-
-newSeed = CryptBitcoin.newSeed
 
 def _privatekeyToWif(private_key):
     network_wif = get_network()["wif"]

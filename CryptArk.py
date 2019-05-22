@@ -33,8 +33,6 @@ def newPrivatekey():  # Return new private key
     return _privatekeyToWif(newSeed())
 
 def hdPrivatekey(seed, child):
-    if not seed.startswith("Ark|"):
-        raise WrongCryptoError()
     seed = b"\x00" + \
         (child % 100000000).to_bytes(4, "big") + \
         seed.encode() + \

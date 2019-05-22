@@ -1,49 +1,63 @@
 from Crypt.Cryptography import newSeed, WrongCryptoError
-
 from crypto.configuration.network import get_network, set_network
+from lib import pybitcointools as btctools
 from crypto.identity.address import address_from_private_key
 from crypto.identity.address import address_from_public_key
 from crypto.identity.private_key import PrivateKey
 from crypto.networks.mainnet import Mainnet
-from binary.unsigned_integer.writer import write_bit8
 from coincurve import PublicKey
-from base58 import b58encode_check, b58decode_check
 from base64 import b64encode, b64decode
 import binascii
 import hashlib
 
+WORDLIST = btctools.wordlist_english
+
 set_network(Mainnet)
 
-def _privatekeyToWif(private_key):
-    network_wif = get_network()["wif"]
-    seed = write_bit8(network_wif) + \
-        bytes(bytearray.fromhex(private_key)) + \
-        write_bit8(0x01)
-    return b58encode_check(seed).decode()
+def _intToBits(n, length=8):
+    return bin(n)[2:].rjust(length, "0")
 
-def _wifToPrivatekey(wif):
-    network_wif = get_network()["wif"]
-    seed = b58decode_check(wif)
-    if seed[0] != network_wif or seed[-1] != 0x01:
+def _privatekeyToBip(private_key):
+    private_key = bytes(bytearray.fromhex(private_key))  # Decode from hex
+    bits = "".join(map(_intToBits, private_key))  # Split into bits
+    bits += _intToBits(hashlib.sha256(private_key).digest()[0])[:4]  # Add checksum
+    words = [WORDLIST[int(bits[i:i + 11], 2)].strip() for i in range(0, len(bits), 11)]
+    return " ".join(words)
+
+def _bipToPrivatekey(bip):
+    if len(bip.split()) != 12:
         raise WrongCryptoError()
-    return binascii.hexlify(bytearray(seed[1:-1])).decode()
+    # Restore bit stream
+    bits = ""
+    for word in bip.split():
+        try:
+            bits += _intToBits(WORDLIST.index(word + "\n"), 11)
+        except IndexError:
+            raise WrongCryptoError()
+    # Get private key
+    private_key = int(bits[:128], 2).to_bytes(16, byteorder="big")
+    # Validate checksum
+    checksum = _intToBits(hashlib.sha256(private_key).digest()[0])[:4]
+    if checksum != bits[128:]:
+        raise WrongCryptoError()
+    return hashlib.sha256(bip.encode()).hexdigest()
 
 
 def newPrivatekey():  # Return new private key
-    return _privatekeyToWif(newSeed())
+    return _privatekeyToBip(newSeed()[:32])
 
 def hdPrivatekey(seed, child):
     seed = b"\x00" + \
         (child % 100000000).to_bytes(4, "big") + \
         seed.encode() + \
         b"\x01"
-    return _privatekeyToWif(hashlib.sha256(seed).hexdigest())
+    return _privatekeyToBip(hashlib.sha256(seed).hexdigest()[:32])
 
 def privatekeyToAddress(privatekey):  # Return address from private key
-    return address_from_private_key(_wifToPrivatekey(privatekey))
+    return address_from_private_key(_bipToPrivatekey(privatekey))
 
 def sign(data, privatekey):  # Return sign to data using private key
-    privatekey = _wifToPrivatekey(privatekey)
+    privatekey = _bipToPrivatekey(privatekey)
     sig = PrivateKey(privatekey).private_key.sign_recoverable(data.encode())
     return b64encode(sig).decode()
 

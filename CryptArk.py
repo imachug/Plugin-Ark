@@ -45,7 +45,7 @@ def privatekeyToAddress(privatekey):  # Return address from private key
 def sign(data, privatekey):  # Return sign to data using private key
     privatekey = _wifToPrivatekey(privatekey)
     sig = PrivateKey(privatekey).private_key.sign_recoverable(data.encode())
-    return b64encode(sig)
+    return b64encode(sig).decode()
 
 def verify(data, valid_address, sign):  # Verify data using address and sign
     sign = b64decode(sign)

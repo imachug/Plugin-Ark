@@ -73,3 +73,6 @@ def verify(data, valid_address, sign):  # Verify data using address and sign
         return address in valid_address
     else:
         return address == valid_address
+
+def isAddress(address):
+    return re.match("^A[A-Za-z0-9]{25,34}$", address)

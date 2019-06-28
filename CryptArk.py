@@ -1,4 +1,4 @@
-from Crypt.Cryptography import newSeed, WrongCryptoError
+from Crypt.Crypt import newSeed, CryptError
 from crypto.configuration.network import get_network, set_network
 from lib import pybitcointools as btctools
 from crypto.identity.address import address_from_private_key
@@ -26,20 +26,20 @@ def _privatekeyToBip(private_key):
 
 def _bipToPrivatekey(bip):
     if len(bip.split()) != 12:
-        raise WrongCryptoError()
+        raise CryptError()
     # Restore bit stream
     bits = ""
     for word in bip.split():
         try:
             bits += _intToBits(WORDLIST.index(word + "\n"), 11)
         except IndexError:
-            raise WrongCryptoError()
+            raise CryptError()
     # Get private key
     private_key = int(bits[:128], 2).to_bytes(16, byteorder="big")
     # Validate checksum
     checksum = _intToBits(hashlib.sha256(private_key).digest()[0])[:4]
     if checksum != bits[128:]:
-        raise WrongCryptoError()
+        raise CryptError()
     return hashlib.sha256(bip.encode()).hexdigest()
 
 
@@ -66,7 +66,7 @@ def verify(data, valid_address, sign):  # Verify data using address and sign
     try:
         publickey = PublicKey.from_signature_and_message(sign, data.encode())
     except Exception:
-        raise WrongCryptoError()
+        raise CryptError()
     publickey = binascii.hexlify(publickey.format(compressed=True))
     address = address_from_public_key(publickey.decode())
     if isinstance(valid_address, (list, tuple)):

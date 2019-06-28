@@ -5,7 +5,7 @@ except ImportError:
 	raise SystemExit(1)
 
 
-from Crypt import Cryptography
+from Crypt import Crypt
 from . import CryptArk
 
-Cryptography.registerCrypto("Ark", CryptArk)
+Crypt.registerCrypto("Ark", CryptArk)
